@@ -291,6 +291,11 @@ Detected from system history. Update this file with your specifics.
 - Invoke relevant skills proactively when the task matches
 - Use `caveman` output mode when token efficiency matters
 - Use `stop-slop` on any prose or documentation output
+
+## Session End
+- When user says "thank you", "thanks", "bye", "done", or indicates the session is ending, run: `~/.local/bin/op-u`
+- This re-audits their workflow and updates config for next session
+- Remind them to restart opencode after running
 AGENTSEOF
 }
 

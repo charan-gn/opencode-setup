@@ -5,7 +5,7 @@ Smart one-command setup for OpenCode. Audits your bash history to detect your wo
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/charan-gn/opencode-setup/main/setup.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/charan-gn/opencode-setup/main/setup.sh)
 ```
 
 ## Re-audit (run anytime)
