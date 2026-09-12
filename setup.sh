@@ -181,16 +181,11 @@ build_skills_config() {
   fi
 
   # Build groups
-  GROUPS="
-        \"dev-core\": [\"c-project\", \"github-ops\", \"systematic-debugging\", \"verification-before-completion\"],"
-  [ "$HAS_PYTHON" = "yes" ] && GROUPS="$GROUPS
-        \"python-dev\": [\"python-style\", \"github-ops\"],"
-  [ "$HAS_DOCKER" = "yes" ] && GROUPS="$GROUPS
-        \"devops\": [\"docker\", \"github-ops\"],"
-  [ "$HAS_HYPRLAND" = "yes" ] && GROUPS="$GROUPS
-        \"desktop\": [\"hyprland-config\", \"neovim\"],"
-  [ "$HAS_ADB" = "yes" ] && GROUPS="$GROUPS
-        \"android\": [\"adb-ops\"]"
+  GROUPS="\"dev-core\": [\"c-project\", \"github-ops\", \"systematic-debugging\", \"verification-before-completion\"]"
+  [ "$HAS_PYTHON" = "yes" ] && GROUPS="$GROUPS, \"python-dev\": [\"python-style\", \"github-ops\"]"
+  [ "$HAS_DOCKER" = "yes" ] && GROUPS="$GROUPS, \"devops\": [\"docker\", \"github-ops\"]"
+  [ "$HAS_HYPRLAND" = "yes" ] && GROUPS="$GROUPS, \"desktop\": [\"hyprland-config\", \"neovim\"]"
+  [ "$HAS_ADB" = "yes" ] && GROUPS="$GROUPS, \"android\": [\"adb-ops\"]"
 }
 
 # ---- Write opencode.jsonc ----
@@ -207,7 +202,7 @@ write_config() {
       "fileTypeSkills": {$(echo "$FILE_TRIGGERS" | sed '/^$/d')},
       "pathPatterns": {$(echo "$PATH_TRIGGERS" | sed '/^$/d')},
       "contentTriggers": {$(echo "$CONTENT_TRIGGERS" | sed '/^$/d')},
-      "groups": {$(echo "$GROUPS" | sed '/^$/d')},
+      "groups": {$GROUPS},
       "maxTokens": 8000,
       "showToasts": true,
       "enableTools": true
@@ -581,16 +576,11 @@ GROUPS=""
 [ "$HAS_API" = "yes" ] && ALWAYS_LOAD="$ALWAYS_LOAD api-design"
 
 # Build groups
-GROUPS="
-        \"dev-core\": [\"c-project\", \"github-ops\", \"systematic-debugging\", \"verification-before-completion\"],"
-[ "$HAS_PYTHON" = "yes" ] && GROUPS="$GROUPS
-        \"python-dev\": [\"python-style\", \"github-ops\"],"
-[ "$HAS_DOCKER" = "yes" ] && GROUPS="$GROUPS
-        \"devops\": [\"docker\", \"github-ops\"],"
-[ "$HAS_HYPRLAND" = "yes" ] && GROUPS="$GROUPS
-        \"desktop\": [\"hyprland-config\", \"neovim\"],"
-[ "$HAS_ADB" = "yes" ] && GROUPS="$GROUPS
-        \"android\": [\"adb-ops\"]"
+GROUPS="\"dev-core\": [\"c-project\", \"github-ops\", \"systematic-debugging\", \"verification-before-completion\"]"
+[ "$HAS_PYTHON" = "yes" ] && GROUPS="$GROUPS, \"python-dev\": [\"python-style\", \"github-ops\"]"
+[ "$HAS_DOCKER" = "yes" ] && GROUPS="$GROUPS, \"devops\": [\"docker\", \"github-ops\"]"
+[ "$HAS_HYPRLAND" = "yes" ] && GROUPS="$GROUPS, \"desktop\": [\"hyprland-config\", \"neovim\"]"
+[ "$HAS_ADB" = "yes" ] && GROUPS="$GROUPS, \"android\": [\"adb-ops\"]"
 
 # Write config
 cat > "$OPENCODE_DIR/opencode.jsonc" << CONFIGEOF
@@ -605,7 +595,7 @@ cat > "$OPENCODE_DIR/opencode.jsonc" << CONFIGEOF
       "fileTypeSkills": {$(echo "$FILE_TRIGGERS" | sed '/^$/d')},
       "pathPatterns": {$(echo "$PATH_TRIGGERS" | sed '/^$/d')},
       "contentTriggers": {$(echo "$CONTENT_TRIGGERS" | sed '/^$/d')},
-      "groups": {$(echo "$GROUPS" | sed '/^$/d')},
+      "groups": {$GROUPS},
       "maxTokens": 8000,
       "showToasts": true,
       "enableTools": true
