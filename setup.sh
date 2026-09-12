@@ -191,6 +191,13 @@ Detected from system history. Update this file with your specifics.
 - When user says "thank you", "thanks", "bye", "done", or indicates the session is ending, run: `~/.local/bin/op-u`
 - This re-audits their workflow and updates config for next session
 - Remind them to restart opencode after running
+
+## Lessons Learned
+- Never use unquoted heredocs (\`\<< EOF`) to generate JSON - variable expansion breaks escaped quotes, use Python json.dumps instead
+- Commands need \`$ARGUMENTS\` placeholder to accept user input
+- When extracting functions from a script, verify the extracted content doesn't include trailing code from the parent script
+- Always validate generated JSON with \`python3 -c "import json; json.load(open('file'))"\` before committing
+- Test script output locally before pushing - syntax check alone doesn't catch runtime variable expansion bugs
 AGENTSEOF
 }
 
