@@ -339,7 +339,11 @@ write_commands() {
 ---
 description: Save a lesson learned to AGENTS.md
 ---
-Take what the user said and write it as a concise, actionable instruction to AGENTS.md. Short rule, not a story.
+Take what the user said below and write it as a concise, actionable instruction to the appropriate AGENTS.md file (project-level if in a project, global otherwise).
+
+User said: $ARGUMENTS
+
+Format: short rule, not a story. Example: "Use `set -euo pipefail` in all bash scripts."
 CMDEOF
 
   cat > "$COMMANDS_DIR/finish-work.md" << 'CMDEOF'
@@ -360,7 +364,11 @@ CMDEOF
 ---
 description: Auto-generate a skill by researching the current task online
 ---
-Research the topic online, synthesize into a SKILL.md at ~/.config/opencode/skills/<name>/SKILL.md. Structure: name, description with trigger keywords, sections for commands/patterns/gotchas, safety section. Max 150 lines. Confirm creation to user.
+Research the topic below online, synthesize into a SKILL.md at ~/.config/opencode/skills/<name>/SKILL.md.
+
+Topic: $ARGUMENTS
+
+Structure: name, description with trigger keywords, sections for commands/patterns/gotchas, safety section. Max 150 lines. Confirm creation to user.
 CMDEOF
 }
 
