@@ -190,19 +190,20 @@ build_skills_config() {
 
 # ---- Write opencode.jsonc ----
 write_config() {
-  cat > "$OPENCODE_DIR/opencode.jsonc" << CONFIGEOF
+  SKILLS_JSON=$(echo "$ALWAYS_LOAD" | sed 's/ /", "/g' | sed 's/^/"/' | sed 's/$/"/')
+  cat > "$OPENCODE_DIR/opencode.jsonc" << 'CONFIGEOF'
 {
-  "\$schema": "https://opencode.ai/config.json",
+  "$schema": "https://opencode.ai/config.json",
   "model": "zen/big-pickle",
   "small_model": "zen/big-pickle",
   "plugin": [
     "opencode-skills-collection@latest",
     ["opencode-plugin-preload-skills", {
-      "skills": [$(echo "$ALWAYS_LOAD" | sed 's/ /", "/g' | sed 's/^/"/' | sed 's/$/"/')],
-      "fileTypeSkills": {$(echo "$FILE_TRIGGERS" | sed '/^$/d')},
-      "pathPatterns": {$(echo "$PATH_TRIGGERS" | sed '/^$/d')},
-      "contentTriggers": {$(echo "$CONTENT_TRIGGERS" | sed '/^$/d')},
-      "groups": {$GROUPS},
+      "skills": [SKILLS_PLACEHOLDER],
+      "fileTypeSkills": {FILETYPE_PLACEHOLDER},
+      "pathPatterns": {PATH_PLACEHOLDER},
+      "contentTriggers": {CONTENT_PLACEHOLDER},
+      "groups": {GROUPS_PLACEHOLDER},
       "maxTokens": 8000,
       "showToasts": true,
       "enableTools": true
@@ -234,6 +235,13 @@ write_config() {
   }
 }
 CONFIGEOF
+
+  # Replace placeholders with actual values
+  sed -i "s|SKILLS_PLACEHOLDER|$SKILLS_JSON|g" "$OPENCODE_DIR/opencode.jsonc"
+  sed -i "s|FILETYPE_PLACEHOLDER|$(echo "$FILE_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
+  sed -i "s|PATH_PLACEHOLDER|$(echo "$PATH_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
+  sed -i "s|CONTENT_PLACEHOLDER|$(echo "$CONTENT_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
+  sed -i "s|GROUPS_PLACEHOLDER|$GROUPS|g" "$OPENCODE_DIR/opencode.jsonc"
 }
 
 # ---- Write tui.json ----
@@ -583,19 +591,20 @@ GROUPS="\"dev-core\": [\"c-project\", \"github-ops\", \"systematic-debugging\", 
 [ "$HAS_ADB" = "yes" ] && GROUPS="$GROUPS, \"android\": [\"adb-ops\"]"
 
 # Write config
-cat > "$OPENCODE_DIR/opencode.jsonc" << CONFIGEOF
+SKILLS_JSON=$(echo "$ALWAYS_LOAD" | sed 's/ /", "/g' | sed 's/^/"/' | sed 's/$/"/')
+cat > "$OPENCODE_DIR/opencode.jsonc" << 'CONFIGEOF'
 {
-  "\$schema": "https://opencode.ai/config.json",
+  "$schema": "https://opencode.ai/config.json",
   "model": "zen/big-pickle",
   "small_model": "zen/big-pickle",
   "plugin": [
     "opencode-skills-collection@latest",
     ["opencode-plugin-preload-skills", {
-      "skills": [$(echo "$ALWAYS_LOAD" | sed 's/ /", "/g' | sed 's/^/"/' | sed 's/$/"/')],
-      "fileTypeSkills": {$(echo "$FILE_TRIGGERS" | sed '/^$/d')},
-      "pathPatterns": {$(echo "$PATH_TRIGGERS" | sed '/^$/d')},
-      "contentTriggers": {$(echo "$CONTENT_TRIGGERS" | sed '/^$/d')},
-      "groups": {$GROUPS},
+      "skills": [SKILLS_PLACEHOLDER],
+      "fileTypeSkills": {FILETYPE_PLACEHOLDER},
+      "pathPatterns": {PATH_PLACEHOLDER},
+      "contentTriggers": {CONTENT_PLACEHOLDER},
+      "groups": {GROUPS_PLACEHOLDER},
       "maxTokens": 8000,
       "showToasts": true,
       "enableTools": true
@@ -627,6 +636,12 @@ cat > "$OPENCODE_DIR/opencode.jsonc" << CONFIGEOF
   }
 }
 CONFIGEOF
+
+sed -i "s|SKILLS_PLACEHOLDER|$SKILLS_JSON|g" "$OPENCODE_DIR/opencode.jsonc"
+sed -i "s|FILETYPE_PLACEHOLDER|$(echo "$FILE_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
+sed -i "s|PATH_PLACEHOLDER|$(echo "$PATH_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
+sed -i "s|CONTENT_PLACEHOLDER|$(echo "$CONTENT_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
+sed -i "s|GROUPS_PLACEHOLDER|$GROUPS|g" "$OPENCODE_DIR/opencode.jsonc"
 
 echo ""
 echo "Skills auto-loaded: $(echo $ALWAYS_LOAD | wc -w)"
