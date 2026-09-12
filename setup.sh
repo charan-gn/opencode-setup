@@ -16,9 +16,7 @@ BIN_DIR="$HOME/.local/bin"
 
 # ---- Detect user workflow from history ----
 audit_history() {
-  detect() {
-    grep -qi "$1" "$HISTORY" 2>/dev/null && echo "yes" || echo "no"
-  }
+  detect() { grep -qi "$1" "$HISTORY" 2>/dev/null && echo "yes" || echo "no"; }
 
   HAS_PYTHON=$(detect "python\|pip\|venv\|django\|flask\|fastapi")
   HAS_C=$(detect "gcc\|gdb\|valgrind\|make\|cmake\|\.c\b")
@@ -33,215 +31,109 @@ audit_history() {
   HAS_NEOVIM=$(detect "nvim\|neovim\|vim")
   HAS_TMUX=$(detect "tmux")
   HAS_MEDIA=$(detect "kew\|cmus\|cava\|mpv\|yt-dlp\|ffmpeg")
-  HAS_GAMING=$(detect "steam\|proton\|wine\|lutris\|mangohud")
   HAS_SECURITY=$(detect "nmap\|burp\|sqlmap\|nikto\|metasploit")
   HAS_DATA=$(detect "jupyter\|pandas\|numpy\|matplotlib\|tensorflow\|pytorch")
   HAS_WEBDEV=$(detect "react\|vue\|angular\|svelte\|next\|nuxt\|tailwind")
   HAS_API=$(detect "fastapi\|flask\|django\|express\|gin\|axum")
-  HAS_ARCH=$(detect "pacman\|yay\|paru\|makepkg")
 }
 
-# ---- Build dynamic skill config ----
-build_skills_config() {
-  ALWAYS_LOAD="stop-slop systematic-debugging"
-  FILE_TRIGGERS=""
-  PATH_TRIGGERS=""
-  CONTENT_TRIGGERS=""
-  GROUPS=""
+# ---- Generate config with Python ----
+generate_config() {
+  python3 -c "
+import json, sys
 
-  if [ "$HAS_PYTHON" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD python-style"
-    FILE_TRIGGERS="$FILE_TRIGGERS
-        \".py\": [\"python-style\"],"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"python\": [\"python-style\"],
-        \"pip\": [\"python-style\"],
-        \"django\": [\"python-style\"],
-        \"flask\": [\"python-style\"],
-        \"fastapi\": [\"python-style\"],"
-  fi
+skills = ['stop-slop', 'systematic-debugging']
+file_triggers = {}
+path_triggers = {}
+content_triggers = {}
+groups = {}
 
-  if [ "$HAS_C" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD c-project"
-    FILE_TRIGGERS="$FILE_TRIGGERS
-        \".c\": [\"c-project\"],
-        \".h\": [\"c-project\"],"
-    PATH_TRIGGERS="$PATH_TRIGGERS
-        \"**/Makefile\": [\"c-project\"],"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"gcc\": [\"c-project\"],
-        \"valgrind\": [\"c-project\"],
-        \"gdb\": [\"c-project\"],
-        \"compile\": [\"c-project\"],"
-  fi
-
-  if [ "$HAS_BASH" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD shell-scripting"
-    FILE_TRIGGERS="$FILE_TRIGGERS
-        \".sh\": [\"shell-scripting\"],"
-    PATH_TRIGGERS="$PATH_TRIGGERS
-        \"**/*.sh\": [\"shell-scripting\"],"
-  fi
-
-  if [ "$HAS_NODE" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD nodejs"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"npm\": [\"nodejs\"],
-        \"node\": [\"nodejs\"],
-        \"typescript\": [\"nodejs\"],
-        \"bun\": [\"nodejs\"],"
-  fi
-
-  if [ "$HAS_RUST" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD rust"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"cargo\": [\"rust\"],
-        \"rust\": [\"rust\"],
-        \"rustc\": [\"rust\"],"
-  fi
-
-  if [ "$HAS_GO" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD golang"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"go build\": [\"golang\"],
-        \"golang\": [\"golang\"],"
-  fi
-
-  if [ "$HAS_DOCKER" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD docker"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"docker\": [\"docker\"],
-        \"container\": [\"docker\"],
-        \"podman\": [\"docker\"],"
-  fi
-
-  if [ "$HAS_GIT" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD github-ops"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"github\": [\"github-ops\"],
-        \"pull request\": [\"github-ops\"],
-        \"issue\": [\"github-ops\"],
-        \"workflow\": [\"github-ops\"],
-        \"release\": [\"github-ops\"],
-        \"merge\": [\"github-ops\"],"
-  fi
-
-  if [ "$HAS_HYPRLAND" = "yes" ]; then
-    PATH_TRIGGERS="$PATH_TRIGGERS
-        \"~/.config/hypr/**\": [\"hyprland-config\"],"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"hyprland\": [\"hyprland-config\"],
-        \"keybind\": [\"hyprland-config\"],
-        \"monitor\": [\"hyprland-config\"],
-        \"wayland\": [\"hyprland-config\"],"
-    ALWAYS_LOAD="$ALWAYS_LOAD hyprland-config"
-  fi
-
-  if [ "$HAS_ADB" = "yes" ]; then
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"adb\": [\"adb-ops\"],
-        \"android\": [\"adb-ops\"],
-        \"waydroid\": [\"adb-ops\"],
-        \"scrcpy\": [\"adb-ops\"],"
-    ALWAYS_LOAD="$ALWAYS_LOAD adb-ops"
-  fi
-
-  if [ "$HAS_NEOVIM" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD neovim"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"nvim\": [\"neovim\"],
-        \"neovim\": [\"neovim\"],
-        \"vim\": [\"neovim\"],"
-  fi
-
-  if [ "$HAS_TMUX" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD tmux"
-    CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"tmux\": [\"tmux\"],"
-  fi
-
-  if [ "$HAS_MEDIA" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD media-tools"
-  fi
-
-  if [ "$HAS_SECURITY" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD security-audit"
-  fi
-
-  if [ "$HAS_DATA" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD data-science"
-  fi
-
-  if [ "$HAS_WEBDEV" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD web-development"
-  fi
-
-  if [ "$HAS_API" = "yes" ]; then
-    ALWAYS_LOAD="$ALWAYS_LOAD api-design"
-  fi
-
-  # Build groups
-  GROUPS="\"dev-core\": [\"c-project\", \"github-ops\", \"systematic-debugging\", \"verification-before-completion\"]"
-  [ "$HAS_PYTHON" = "yes" ] && GROUPS="$GROUPS, \"python-dev\": [\"python-style\", \"github-ops\"]"
-  [ "$HAS_DOCKER" = "yes" ] && GROUPS="$GROUPS, \"devops\": [\"docker\", \"github-ops\"]"
-  [ "$HAS_HYPRLAND" = "yes" ] && GROUPS="$GROUPS, \"desktop\": [\"hyprland-config\", \"neovim\"]"
-  [ "$HAS_ADB" = "yes" ] && GROUPS="$GROUPS, \"android\": [\"adb-ops\"]"
+skills_extra = {
+    'python': ('python-style', {'.py': ['python-style']}, {'python': ['python-style'], 'pip': ['python-style'], 'django': ['python-style'], 'flask': ['python-style'], 'fastapi': ['python-style']}, {}),
+    'c': ('c-project', {'.c': ['c-project'], '.h': ['c-project']}, {'gcc': ['c-project'], 'valgrind': ['c-project'], 'gdb': ['c-project'], 'compile': ['c-project']}, {'**/Makefile': ['c-project']}),
+    'bash': ('shell-scripting', {'.sh': ['shell-scripting']}, {}, {'**/*.sh': ['shell-scripting']}),
+    'node': ('nodejs', {}, {'npm': ['nodejs'], 'node': ['nodejs'], 'typescript': ['nodejs'], 'bun': ['nodejs']}, {}),
+    'rust': ('rust', {}, {'cargo': ['rust'], 'rust': ['rust'], 'rustc': ['rust']}, {}),
+    'go': ('golang', {}, {'go build': ['golang'], 'golang': ['golang']}, {}),
+    'docker': ('docker', {}, {'docker': ['docker'], 'container': ['docker'], 'podman': ['docker']}, {}),
+    'git': ('github-ops', {}, {'github': ['github-ops'], 'pull request': ['github-ops'], 'issue': ['github-ops'], 'workflow': ['github-ops'], 'release': ['github-ops'], 'merge': ['github-ops']}, {}),
+    'hyprland': ('hyprland-config', {}, {'hyprland': ['hyprland-config'], 'keybind': ['hyprland-config'], 'monitor': ['hyprland-config'], 'wayland': ['hyprland-config']}, {'~/.config/hypr/**': ['hyprland-config']}),
+    'adb': ('adb-ops', {}, {'adb': ['adb-ops'], 'android': ['adb-ops'], 'waydroid': ['adb-ops'], 'scrcpy': ['adb-ops']}, {}),
+    'neovim': ('neovim', {}, {'nvim': ['neovim'], 'neovim': ['neovim'], 'vim': ['neovim']}, {}),
+    'tmux': ('tmux', {}, {'tmux': ['tmux']}, {}),
+    'media': ('media-tools', {}, {}, {}),
+    'security': ('security-audit', {}, {}, {}),
+    'data': ('data-science', {}, {}, {}),
+    'webdev': ('web-development', {}, {}, {}),
+    'api': ('api-design', {}, {}, {}),
 }
 
-# ---- Write opencode.jsonc ----
-write_config() {
-  SKILLS_JSON=$(echo "$ALWAYS_LOAD" | sed 's/ /", "/g' | sed 's/^/"/' | sed 's/$/"/')
-  cat > "$OPENCODE_DIR/opencode.jsonc" << 'CONFIGEOF'
-{
-  "$schema": "https://opencode.ai/config.json",
-  "model": "zen/big-pickle",
-  "small_model": "zen/big-pickle",
-  "plugin": [
-    "opencode-skills-collection@latest",
-    ["opencode-plugin-preload-skills", {
-      "skills": [SKILLS_PLACEHOLDER],
-      "fileTypeSkills": {FILETYPE_PLACEHOLDER},
-      "pathPatterns": {PATH_PLACEHOLDER},
-      "contentTriggers": {CONTENT_PLACEHOLDER},
-      "groups": {GROUPS_PLACEHOLDER},
-      "maxTokens": 8000,
-      "showToasts": true,
-      "enableTools": true
-    }]
-  ],
-  "skills": {
-    "paths": ["~/.config/opencode/skills"]
-  },
-  "instructions": ["AGENTS.md"],
-  "permission": {
-    "bash": {
-      "git *": "allow",
-      "ls *": "allow",
-      "cat *": "allow",
-      "find *": "allow",
-      "grep *": "allow",
-      "mkdir *": "allow",
-      "cp *": "allow",
-      "mv *": "allow",
-      "rm -rf *": "ask",
-      "*": "ask"
-    },
-    "edit": "allow",
-    "read": "allow",
-    "glob": "allow",
-    "grep": "allow",
-    "webfetch": "allow",
-    "websearch": "allow"
-  }
+detected = {
+    'python': '$HAS_PYTHON' == 'yes',
+    'c': '$HAS_C' == 'yes',
+    'bash': '$HAS_BASH' == 'yes',
+    'node': '$HAS_NODE' == 'yes',
+    'rust': '$HAS_RUST' == 'yes',
+    'go': '$HAS_GO' == 'yes',
+    'docker': '$HAS_DOCKER' == 'yes',
+    'git': '$HAS_GIT' == 'yes',
+    'hyprland': '$HAS_HYPRLAND' == 'yes',
+    'adb': '$HAS_ADB' == 'yes',
+    'neovim': '$HAS_NEOVIM' == 'yes',
+    'tmux': '$HAS_TMUX' == 'yes',
+    'media': '$HAS_MEDIA' == 'yes',
+    'security': '$HAS_SECURITY' == 'yes',
+    'data': '$HAS_DATA' == 'yes',
+    'webdev': '$HAS_WEBDEV' == 'yes',
+    'api': '$HAS_API' == 'yes',
 }
-CONFIGEOF
 
-  # Replace placeholders with actual values
-  sed -i "s|SKILLS_PLACEHOLDER|$SKILLS_JSON|g" "$OPENCODE_DIR/opencode.jsonc"
-  sed -i "s|FILETYPE_PLACEHOLDER|$(echo "$FILE_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
-  sed -i "s|PATH_PLACEHOLDER|$(echo "$PATH_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
-  sed -i "s|CONTENT_PLACEHOLDER|$(echo "$CONTENT_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
-  sed -i "s|GROUPS_PLACEHOLDER|$GROUPS|g" "$OPENCODE_DIR/opencode.jsonc"
+for key, active in detected.items():
+    if active and key in skills_extra:
+        name, ft, ct, pt = skills_extra[key]
+        skills.append(name)
+        file_triggers.update(ft)
+        content_triggers.update(ct)
+        path_triggers.update(pt)
+
+groups['dev-core'] = ['c-project', 'github-ops', 'systematic-debugging', 'verification-before-completion']
+if detected.get('python'): groups['python-dev'] = ['python-style', 'github-ops']
+if detected.get('docker'): groups['devops'] = ['docker', 'github-ops']
+if detected.get('hyprland'): groups['desktop'] = ['hyprland-config', 'neovim']
+if detected.get('adb'): groups['android'] = ['adb-ops']
+
+config = {
+    '\$schema': 'https://opencode.ai/config.json',
+    'model': 'zen/big-pickle',
+    'small_model': 'zen/big-pickle',
+    'plugin': [
+        'opencode-skills-collection@latest',
+        ['opencode-plugin-preload-skills', {
+            'skills': skills,
+            'fileTypeSkills': file_triggers,
+            'pathPatterns': path_triggers,
+            'contentTriggers': content_triggers,
+            'groups': groups,
+            'maxTokens': 8000,
+            'showToasts': True,
+            'enableTools': True
+        }]
+    ],
+    'skills': {'paths': ['~/.config/opencode/skills']},
+    'instructions': ['AGENTS.md'],
+    'permission': {
+        'bash': {
+            'git *': 'allow', 'ls *': 'allow', 'cat *': 'allow',
+            'find *': 'allow', 'grep *': 'allow', 'mkdir *': 'allow',
+            'cp *': 'allow', 'mv *': 'allow', 'rm -rf *': 'ask', '*': 'ask'
+        },
+        'edit': 'allow', 'read': 'allow', 'glob': 'allow',
+        'grep': 'allow', 'webfetch': 'allow', 'websearch': 'allow'
+    }
+}
+
+print(json.dumps(config, indent=2))
+" > "$OPENCODE_DIR/opencode.jsonc"
 }
 
 # ---- Write tui.json ----
@@ -492,21 +384,13 @@ install_op_u() {
 #!/bin/bash
 set -euo pipefail
 
-# op-u: Re-audit and update OpenCode config
 OPENCODE_DIR="$HOME/.config/opencode"
-SKILLS_DIR="$OPENCODE_DIR/skills"
-AGENTS_DIR="$OPENCODE_DIR/agents"
-COMMANDS_DIR="$OPENCODE_DIR/commands"
-THEMES_DIR="$OPENCODE_DIR/themes"
 HISTORY="$HOME/.bash_history"
 
 echo "=== OpenCode Re-Audit ==="
 echo ""
 
-# Detect workflow
-detect() {
-  grep -qi "$1" "$HISTORY" 2>/dev/null && echo "yes" || echo "no"
-}
+detect() { grep -qi "$1" "$HISTORY" 2>/dev/null && echo "yes" || echo "no"; }
 
 HAS_PYTHON=$(detect "python\|pip\|venv\|django\|flask\|fastapi")
 HAS_C=$(detect "gcc\|gdb\|valgrind\|make\|cmake\|\.c\b")
@@ -526,126 +410,105 @@ HAS_DATA=$(detect "jupyter\|pandas\|numpy\|matplotlib\|tensorflow\|pytorch")
 HAS_WEBDEV=$(detect "react\|vue\|angular\|svelte\|next\|nuxt\|tailwind")
 HAS_API=$(detect "fastapi\|flask\|django\|express\|gin\|axum")
 
-echo "Detected:"
-echo "  Python:       $HAS_PYTHON"
-echo "  C:            $HAS_C"
-echo "  Bash:         $HAS_BASH"
-echo "  Node.js:      $HAS_NODE"
-echo "  Rust:         $HAS_RUST"
-echo "  Go:           $HAS_GO"
-echo "  Docker:       $HAS_DOCKER"
-echo "  Git/GitHub:   $HAS_GIT"
-echo "  Hyprland:     $HAS_HYPRLAND"
-echo "  ADB/Android:  $HAS_ADB"
-echo "  Neovim:       $HAS_NEOVIM"
-echo "  Tmux:         $HAS_TMUX"
-echo "  Media:        $HAS_MEDIA"
-echo "  Security:     $HAS_SECURITY"
-echo "  Data/ML:      $HAS_DATA"
-echo "  Web dev:      $HAS_WEBDEV"
-echo ""
+echo "Detected: python=$HAS_PYTHON c=$HAS_C git=$HAS_GIT hyprland=$HAS_HYPRLAND adb=$HAS_ADB"
 
-# Build skill lists
-ALWAYS_LOAD="stop-slop systematic-debugging"
-FILE_TRIGGERS=""
-PATH_TRIGGERS=""
-CONTENT_TRIGGERS=""
-GROUPS=""
+python3 -c "
+import json, os
 
-[ "$HAS_PYTHON" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD python-style"; FILE_TRIGGERS="$FILE_TRIGGERS
-        \".py\": [\"python-style\"],"; CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"python\": [\"python-style\"],"; }
-[ "$HAS_C" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD c-project"; FILE_TRIGGERS="$FILE_TRIGGERS
-        \".c\": [\"c-project\"],"; PATH_TRIGGERS="$PATH_TRIGGERS
-        \"**/Makefile\": [\"c-project\"],"; CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"gcc\": [\"c-project\"],"; }
-[ "$HAS_BASH" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD shell-scripting"; FILE_TRIGGERS="$FILE_TRIGGERS
-        \".sh\": [\"shell-scripting\"],"; }
-[ "$HAS_NODE" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD nodejs"; CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"npm\": [\"nodejs\"],"; }
-[ "$HAS_RUST" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD rust"; CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"cargo\": [\"rust\"],"; }
-[ "$HAS_GO" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD golang"; }
-[ "$HAS_DOCKER" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD docker"; CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"docker\": [\"docker\"],"; }
-[ "$HAS_GIT" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD github-ops"; CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"github\": [\"github-ops\"],"; }
-[ "$HAS_HYPRLAND" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD hyprland-config"; PATH_TRIGGERS="$PATH_TRIGGERS
-        \"~/.config/hypr/**\": [\"hyprland-config\"],"; CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"hyprland\": [\"hyprland-config\"],"; }
-[ "$HAS_ADB" = "yes" ] && { ALWAYS_LOAD="$ALWAYS_LOAD adb-ops"; CONTENT_TRIGGERS="$CONTENT_TRIGGERS
-        \"adb\": [\"adb-ops\"],"; }
-[ "$HAS_NEOVIM" = "yes" ] && ALWAYS_LOAD="$ALWAYS_LOAD neovim"
-[ "$HAS_TMUX" = "yes" ] && ALWAYS_LOAD="$ALWAYS_LOAD tmux"
-[ "$HAS_MEDIA" = "yes" ] && ALWAYS_LOAD="$ALWAYS_LOAD media-tools"
-[ "$HAS_SECURITY" = "yes" ] && ALWAYS_LOAD="$ALWAYS_LOAD security-audit"
-[ "$HAS_DATA" = "yes" ] && ALWAYS_LOAD="$ALWAYS_LOAD data-science"
-[ "$HAS_WEBDEV" = "yes" ] && ALWAYS_LOAD="$ALWAYS_LOAD web-development"
-[ "$HAS_API" = "yes" ] && ALWAYS_LOAD="$ALWAYS_LOAD api-design"
+skills = ['stop-slop', 'systematic-debugging']
+file_triggers = {}
+path_triggers = {}
+content_triggers = {}
+groups = {}
 
-# Build groups
-GROUPS="\"dev-core\": [\"c-project\", \"github-ops\", \"systematic-debugging\", \"verification-before-completion\"]"
-[ "$HAS_PYTHON" = "yes" ] && GROUPS="$GROUPS, \"python-dev\": [\"python-style\", \"github-ops\"]"
-[ "$HAS_DOCKER" = "yes" ] && GROUPS="$GROUPS, \"devops\": [\"docker\", \"github-ops\"]"
-[ "$HAS_HYPRLAND" = "yes" ] && GROUPS="$GROUPS, \"desktop\": [\"hyprland-config\", \"neovim\"]"
-[ "$HAS_ADB" = "yes" ] && GROUPS="$GROUPS, \"android\": [\"adb-ops\"]"
-
-# Write config
-SKILLS_JSON=$(echo "$ALWAYS_LOAD" | sed 's/ /", "/g' | sed 's/^/"/' | sed 's/$/"/')
-cat > "$OPENCODE_DIR/opencode.jsonc" << 'CONFIGEOF'
-{
-  "$schema": "https://opencode.ai/config.json",
-  "model": "zen/big-pickle",
-  "small_model": "zen/big-pickle",
-  "plugin": [
-    "opencode-skills-collection@latest",
-    ["opencode-plugin-preload-skills", {
-      "skills": [SKILLS_PLACEHOLDER],
-      "fileTypeSkills": {FILETYPE_PLACEHOLDER},
-      "pathPatterns": {PATH_PLACEHOLDER},
-      "contentTriggers": {CONTENT_PLACEHOLDER},
-      "groups": {GROUPS_PLACEHOLDER},
-      "maxTokens": 8000,
-      "showToasts": true,
-      "enableTools": true
-    }]
-  ],
-  "skills": {
-    "paths": ["~/.config/opencode/skills"]
-  },
-  "instructions": ["AGENTS.md"],
-  "permission": {
-    "bash": {
-      "git *": "allow",
-      "ls *": "allow",
-      "cat *": "allow",
-      "find *": "allow",
-      "grep *": "allow",
-      "mkdir *": "allow",
-      "cp *": "allow",
-      "mv *": "allow",
-      "rm -rf *": "ask",
-      "*": "ask"
-    },
-    "edit": "allow",
-    "read": "allow",
-    "glob": "allow",
-    "grep": "allow",
-    "webfetch": "allow",
-    "websearch": "allow"
-  }
+skills_extra = {
+    'python': ('python-style', {'.py': ['python-style']}, {'python': ['python-style'], 'pip': ['python-style'], 'django': ['python-style'], 'flask': ['python-style'], 'fastapi': ['python-style']}, {}),
+    'c': ('c-project', {'.c': ['c-project'], '.h': ['c-project']}, {'gcc': ['c-project'], 'valgrind': ['c-project'], 'gdb': ['c-project'], 'compile': ['c-project']}, {'**/Makefile': ['c-project']}),
+    'bash': ('shell-scripting', {'.sh': ['shell-scripting']}, {}, {'**/*.sh': ['shell-scripting']}),
+    'node': ('nodejs', {}, {'npm': ['nodejs'], 'node': ['nodejs'], 'typescript': ['nodejs'], 'bun': ['nodejs']}, {}),
+    'rust': ('rust', {}, {'cargo': ['rust'], 'rust': ['rust'], 'rustc': ['rust']}, {}),
+    'go': ('golang', {}, {'go build': ['golang'], 'golang': ['golang']}, {}),
+    'docker': ('docker', {}, {'docker': ['docker'], 'container': ['docker'], 'podman': ['docker']}, {}),
+    'git': ('github-ops', {}, {'github': ['github-ops'], 'pull request': ['github-ops'], 'issue': ['github-ops'], 'workflow': ['github-ops'], 'release': ['github-ops'], 'merge': ['github-ops']}, {}),
+    'hyprland': ('hyprland-config', {}, {'hyprland': ['hyprland-config'], 'keybind': ['hyprland-config'], 'monitor': ['hyprland-config'], 'wayland': ['hyprland-config']}, {'~/.config/hypr/**': ['hyprland-config']}),
+    'adb': ('adb-ops', {}, {'adb': ['adb-ops'], 'android': ['adb-ops'], 'waydroid': ['adb-ops'], 'scrcpy': ['adb-ops']}, {}),
+    'neovim': ('neovim', {}, {'nvim': ['neovim'], 'neovim': ['neovim'], 'vim': ['neovim']}, {}),
+    'tmux': ('tmux', {}, {'tmux': ['tmux']}, {}),
+    'media': ('media-tools', {}, {}, {}),
+    'security': ('security-audit', {}, {}, {}),
+    'data': ('data-science', {}, {}, {}),
+    'webdev': ('web-development', {}, {}, {}),
+    'api': ('api-design', {}, {}, {}),
 }
-CONFIGEOF
 
-sed -i "s|SKILLS_PLACEHOLDER|$SKILLS_JSON|g" "$OPENCODE_DIR/opencode.jsonc"
-sed -i "s|FILETYPE_PLACEHOLDER|$(echo "$FILE_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
-sed -i "s|PATH_PLACEHOLDER|$(echo "$PATH_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
-sed -i "s|CONTENT_PLACEHOLDER|$(echo "$CONTENT_TRIGGERS" | sed '/^$/d' | tr '\n' ' ')|g" "$OPENCODE_DIR/opencode.jsonc"
-sed -i "s|GROUPS_PLACEHOLDER|$GROUPS|g" "$OPENCODE_DIR/opencode.jsonc"
+detected = {
+    'python': '$HAS_PYTHON' == 'yes',
+    'c': '$HAS_C' == 'yes',
+    'bash': '$HAS_BASH' == 'yes',
+    'node': '$HAS_NODE' == 'yes',
+    'rust': '$HAS_RUST' == 'yes',
+    'go': '$HAS_GO' == 'yes',
+    'docker': '$HAS_DOCKER' == 'yes',
+    'git': '$HAS_GIT' == 'yes',
+    'hyprland': '$HAS_HYPRLAND' == 'yes',
+    'adb': '$HAS_ADB' == 'yes',
+    'neovim': '$HAS_NEOVIM' == 'yes',
+    'tmux': '$HAS_TMUX' == 'yes',
+    'media': '$HAS_MEDIA' == 'yes',
+    'security': '$HAS_SECURITY' == 'yes',
+    'data': '$HAS_DATA' == 'yes',
+    'webdev': '$HAS_WEBDEV' == 'yes',
+    'api': '$HAS_API' == 'yes',
+}
 
-echo ""
-echo "Skills auto-loaded: $(echo $ALWAYS_LOAD | wc -w)"
-echo "  $ALWAYS_LOAD"
+for key, active in detected.items():
+    if active and key in skills_extra:
+        name, ft, ct, pt = skills_extra[key]
+        skills.append(name)
+        file_triggers.update(ft)
+        content_triggers.update(ct)
+        path_triggers.update(pt)
+
+groups['dev-core'] = ['c-project', 'github-ops', 'systematic-debugging', 'verification-before-completion']
+if detected.get('python'): groups['python-dev'] = ['python-style', 'github-ops']
+if detected.get('docker'): groups['devops'] = ['docker', 'github-ops']
+if detected.get('hyprland'): groups['desktop'] = ['hyprland-config', 'neovim']
+if detected.get('adb'): groups['android'] = ['adb-ops']
+
+config = {
+    '\$schema': 'https://opencode.ai/config.json',
+    'model': 'zen/big-pickle',
+    'small_model': 'zen/big-pickle',
+    'plugin': [
+        'opencode-skills-collection@latest',
+        ['opencode-plugin-preload-skills', {
+            'skills': skills,
+            'fileTypeSkills': file_triggers,
+            'pathPatterns': path_triggers,
+            'contentTriggers': content_triggers,
+            'groups': groups,
+            'maxTokens': 8000,
+            'showToasts': True,
+            'enableTools': True
+        }]
+    ],
+    'skills': {'paths': ['~/.config/opencode/skills']},
+    'instructions': ['AGENTS.md'],
+    'permission': {
+        'bash': {
+            'git *': 'allow', 'ls *': 'allow', 'cat *': 'allow',
+            'find *': 'allow', 'grep *': 'allow', 'mkdir *': 'allow',
+            'cp *': 'allow', 'mv *': 'allow', 'rm -rf *': 'ask', '*': 'ask'
+        },
+        'edit': 'allow', 'read': 'allow', 'glob': 'allow',
+        'grep': 'allow', 'webfetch': 'allow', 'websearch': 'allow'
+    }
+}
+
+with open(os.path.expanduser('~/.config/opencode/opencode.jsonc'), 'w') as f:
+    json.dump(config, f, indent=2)
+"
+
 echo ""
 echo "Done. Restart opencode to apply."
 OPUEOF
@@ -665,18 +528,17 @@ main() {
   if [ "$mode" = "install" ]; then
     echo "=== OpenCode Smart Setup ==="
     echo ""
+
     echo "[1/8] Auditing workflow..."
     audit_history
     echo "  Detected: python=$HAS_PYTHON c=$HAS_C git=$HAS_GIT hyprland=$HAS_HYPRLAND adb=$HAS_ADB"
     echo ""
 
     echo "[2/8] Building skill config..."
-    build_skills_config
-    echo "  Auto-load: $(echo $ALWAYS_LOAD | wc -w) skills"
-    echo ""
+    mkdir -p "$SKILLS_DIR" "$AGENTS_DIR" "$COMMANDS_DIR" "$THEMES_DIR"
 
     echo "[3/8] Writing config..."
-    write_config
+    generate_config
 
     echo "[4/8] Setting theme..."
     write_theme
@@ -685,7 +547,6 @@ main() {
     write_agents_md
 
     echo "[6/8] Writing skills..."
-    mkdir -p "$SKILLS_DIR" "$AGENTS_DIR" "$COMMANDS_DIR" "$THEMES_DIR"
     write_skills
 
     echo "[7/8] Writing agents and commands..."
@@ -701,8 +562,8 @@ main() {
     echo "=== Setup Complete ==="
     echo ""
     echo "Restart opencode to load changes."
-    echo ""
     echo "Run 'op-u' anytime to re-audit and update your config."
+
   elif [ "$mode" = "update" ]; then
     echo "=== OpenCode Re-Audit ==="
     echo ""
@@ -712,10 +573,8 @@ main() {
     echo ""
 
     echo "[2/3] Rebuilding config..."
-    build_skills_config
-    write_config
-    echo "  Auto-load: $(echo $ALWAYS_LOAD | wc -w) skills"
-    echo ""
+    mkdir -p "$SKILLS_DIR" "$AGENTS_DIR" "$COMMANDS_DIR" "$THEMES_DIR"
+    generate_config
 
     echo "[3/3] Installing op-u updater..."
     install_op_u
