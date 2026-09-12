@@ -2,13 +2,28 @@
 
 Smart one-command setup for OpenCode. Audits your bash history to detect your workflow, then installs relevant skills, agents, commands, and a clean theme.
 
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/charan-gn/opencode-setup/main/setup.sh | bash
+```
+
+## Re-audit (run anytime)
+
+```bash
+op-u
+```
+
+Re-reads your `~/.bash_history`, detects new tools/languages you've started using, and updates your config. Restart opencode after running.
+
 ## What it does
 
-1. **Audits `~/.bash_history`** to detect: languages, tools, desktop environment, distro
+1. **Audits `~/.bash_history`** to detect: languages, tools, desktop environment
 2. **Dynamically builds config** with only relevant skills and triggers
 3. **Installs 1595+ on-demand skills** via the skills collection plugin
-4. **Sets up auto-loading** via the preload-skills plugin (by keyword, file type, path)
-5. **Applies catppuccin theme** (dark, clean, works with Hyprland/Nord/Gruvbox setups)
+4. **Sets up auto-loading** via the preload-skills plugin
+5. **Applies catppuccin theme**
+6. **Installs `op-u`** to `~/.local/bin/` for re-auditing
 
 ## Detected workflows
 
@@ -31,31 +46,21 @@ Smart one-command setup for OpenCode. Audits your bash history to detect your wo
 | Data/ML | `data-science` |
 | Web dev | `web-development` |
 
-## Usage
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/charan-gn/opencode-setup/main/setup.sh | bash
-```
-
-Or clone and run:
-```bash
-git clone https://github.com/charan-gn/opencode-setup.git
-cd opencode-setup
-bash setup.sh
-```
-
 ## What gets installed
 
 ```
 ~/.config/opencode/
-├── opencode.jsonc          # Main config (model, plugins, permissions)
-├── tui.json                # Theme config (catppuccin)
-├── AGENTS.md               # Global agent instructions
-├── package.json            # Plugin dependencies
-├── skills/                 # Custom skills (hyprland, adb, c, github)
-├── agents/                 # review, debug agents
+├── opencode.jsonc          # Main config
+├── tui.json                # Theme (catppuccin)
+├── AGENTS.md               # Global instructions
+├── package.json            # Plugin deps
+├── skills/                 # Custom skills
+├── agents/                 # review, debug
 ├── commands/               # /learn, /finish-work, /session-summary, /custom-skill
-└── themes/                 # Custom themes (empty by default)
+└── themes/
+
+~/.local/bin/
+└── op-u                    # Re-audit command
 ```
 
 ## Commands
@@ -72,14 +77,10 @@ bash setup.sh
 - Edit `~/.config/opencode/AGENTS.md` for your rules
 - Edit `~/.config/opencode/opencode.jsonc` for model/permissions
 - Run `/theme` in opencode to change theme
-- Add skills to `~/.config/opencode/skills/<name>/SKILL.md`
+- Run `op-u` to re-audit after installing new tools
 
 ## Requirements
 
 - OpenCode installed
-- Node.js/npm (for plugin installation)
-- bash (for history detection)
-
-## License
-
-MIT
+- Node.js/npm
+- bash
