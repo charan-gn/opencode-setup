@@ -1,65 +1,252 @@
 #!/bin/bash
 set -euo pipefail
 
-# OpenCode Ultimate Setup Script
-# Sets up skills, agents, commands, plugins, and model config
+# OpenCode Smart Setup
+# Audits user history, installs relevant skills, themes, and config
 # Usage: curl -fsSL <url>/setup.sh | bash
 
 OPENCODE_DIR="$HOME/.config/opencode"
 SKILLS_DIR="$OPENCODE_DIR/skills"
 AGENTS_DIR="$OPENCODE_DIR/agents"
 COMMANDS_DIR="$OPENCODE_DIR/commands"
+THEMES_DIR="$OPENCODE_DIR/themes"
+HISTORY="$HOME/.bash_history"
 
-echo "=== OpenCode Setup ==="
+echo "=== OpenCode Smart Setup ==="
+echo ""
 
-# Create directories
-mkdir -p "$SKILLS_DIR" "$AGENTS_DIR" "$COMMANDS_DIR"
+# ---- Detect user workflow from history ----
+echo "[1/6] Auditing your workflow..."
 
-# ---- Config ----
-cat > "$OPENCODE_DIR/opencode.jsonc" << 'CONFIGEOF'
+detect() {
+  grep -qi "$1" "$HISTORY" 2>/dev/null && echo "yes" || echo "no"
+}
+
+HAS_PYTHON=$(detect "python\|pip\|venv\|django\|flask\|fastapi")
+HAS_C=$(detect "gcc\|gdb\|valgrind\|make\|cmake\|\.c\b")
+HAS_BASH=$(detect "bash\|shellcheck\|shfmt\|#!/bin/bash")
+HAS_NODE=$(detect "node\|npm\|yarn\|pnpm\|bun\|deno\|typescript")
+HAS_RUST=$(detect "cargo\|rustc\|rustup")
+HAS_GO=$(detect "go build\|go run\|golang")
+HAS_DOCKER=$(detect "docker\|docker-compose\|podman\|container")
+HAS_GIT=$(detect "git\|github\|gh\b")
+HAS_HYPRLAND=$(detect "hyprland\|hyprctl\|wayland\|wlroots")
+HAS_ADB=$(detect "adb\|waydroid\|android\|scrcpy")
+HAS_NEOVIM=$(detect "nvim\|neovim\|vim")
+HAS_TMUX=$(detect "tmux")
+HAS_FISH=$(detect "fish")
+HAS_ZSH=$(detect "zsh")
+HAS_I3=$(detect "i3\|sway")
+HAS_KDE=$(detect "kde\|plasma\|kwin")
+HAS_GNOME=$(detect "gnome\|gnome-shell")
+HAS='".$_" | head -1 > /dev/null 2>&1 && HAS_ARCH=$(detect "pacman\|yay\|paru\|makepkg") || HAS_ARCH=$(detect "pacman\|yay\|paru")
+HAS_DEBIAN=$(detect "apt\|dpkg\|debian")
+HAS_FEDORA=$(detect "dnf\|yum\|fedora")
+HAS_MEDIA=$(detect "kew\|cmus\|cava\|mpv\|yt-dlp\|ffmpeg")
+HAS_GAMING=$(detect "steam\|proton\|wine\|lutris\|mangohud")
+HAS(download)" && HAS_DOWNLOAD=1 || HAS_DOWNLOAD=0
+HAS_CURL=$(detect "curl\|wget\|aria2c")
+HAS_SECURITY=$(detect "nmap\|burp\|sqlmap\|nikto\|metasploit")
+HAS_DATA=$(detect "jupyter\|pandas\|numpy\|matplotlib\|tensorflow\|pytorch")
+HAS_WEBDEV=$(detect "react\|vue\|angular\|svelte\|next\|nuxt\|tailwind")
+HAS_API=$(detect "fastapi\|flask\|django\|express\|gin\|axum")
+
+echo "  Python:       $HAS_PYTHON"
+echo "  C:            $HAS_C"
+echo "  Bash:         $HAS_BASH"
+echo "  Node.js:      $HAS_NODE"
+echo "  Rust:         $HAS_RUST"
+echo "  Go:           $HAS_GO"
+echo "  Docker:       $HAS_DOCKER"
+echo "  Git/GitHub:   $HAS_GIT"
+echo "  Hyprland:     $HAS_HYPRLAND"
+echo "  ADB/Android:  $HAS_ADB"
+echo "  Neovim:       $HAS_NEOVIM"
+echo "  Tmux:         $HAS_TMUX"
+echo "  Arch Linux:   $HAS_ARCH"
+echo "  Media tools:  $HAS_MEDIA"
+echo "  Gaming:       $HAS_GAMING"
+echo "  Security:     $HAS_SECURITY"
+echo "  Data/ML:      $HAS_DATA"
+echo "  Web dev:      $HAS_WEBDEV"
+echo ""
+
+# ---- Build dynamic skill list ----
+echo "[2/6] Building skill configuration..."
+
+ALWAYS_LOAD="stop-slop systematic-debugging"
+FILE_TRIGGERS=""
+PATH_TRIGGERS=""
+CONTENT_TRIGGERS=""
+GROUPS=""
+
+# Language skills
+if [ "$HAS_PYTHON" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD python-style"
+  FILE_TRIGGERS="$FILE_TRIGGERS
+        \".py\": [\"python-style\"],"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"python\": [\"python-style\"],
+        \"pip\": [\"python-style\"],
+        \"django\": [\"python-style\"],
+        \"flask\": [\"python-style\"],
+        \"fastapi\": [\"python-style\"],"
+fi
+
+if [ "$HAS_C" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD c-project"
+  FILE_TRIGGERS="$FILE_TRIGGERS
+        \".c\": [\"c-project\"],
+        \".h\": [\"c-project\"],"
+  PATH_TRIGGERS="$PATH_TRIGGERS
+        \"**/Makefile\": [\"c-project\"],"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"gcc\": [\"c-project\"],
+        \"valgrind\": [\"c-project\"],
+        \"gdb\": [\"c-project\"],
+        \"compile\": [\"c-project\"],"
+fi
+
+if [ "$HAS_BASH" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD shell-scripting"
+  FILE_TRIGGERS="$FILE_TRIGGERS
+        \".sh\": [\"shell-scripting\"],"
+  PATH_TRIGGERS="$PATH_TRIGGERS
+        \"**/*.sh\": [\"shell-scripting\"],"
+fi
+
+if [ "$HAS_NODE" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD nodejs"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"npm\": [\"nodejs\"],
+        \"node\": [\"nodejs\"],
+        \"typescript\": [\"nodejs\"],
+        \"bun\": [\"nodejs\"],"
+fi
+
+if [ "$HAS_RUST" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD rust"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"cargo\": [\"rust\"],
+        \"rust\": [\"rust\"],
+        \"rustc\": [\"rust\"],"
+fi
+
+if [ "$HAS_GO" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD golang"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"go build\": [\"golang\"],
+        \"golang\": [\"golang\"],"
+fi
+
+# Tool skills
+if [ "$HAS_DOCKER" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD docker"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"docker\": [\"docker\"],
+        \"container\": [\"docker\"],
+        \"podman\": [\"docker\"],"
+fi
+
+if [ "$HAS_GIT" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD github-ops"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"github\": [\"github-ops\"],
+        \"pull request\": [\"github-ops\"],
+        \"issue\": [\"github-ops\"],
+        \"workflow\": [\"github-ops\"],
+        \"release\": [\"github-ops\"],
+        \"merge\": [\"github-ops\"],"
+fi
+
+if [ "$HAS_HYPRLAND" = "yes" ]; then
+  FILE_TRIGGERS="$FILE_TRIGGERS
+        \".c\": [\"c-project\"],
+        \".h\": [\"c-project\"],"
+  PATH_TRIGGERS="$PATH_TRIGGERS
+        \"~/.config/hypr/**\": [\"hyprland-config\"],"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"hyprland\": [\"hyprland-config\"],
+        \"keybind\": [\"hyprland-config\"],
+        \"monitor\": [\"hyprland-config\"],
+        \"wayland\": [\"hyprland-config\"],"
+  ALWAYS_LOAD="$ALWAYS_LOAD hyprland-config"
+fi
+
+if [ "$HAS_ADB" = "yes" ]; then
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"adb\": [\"adb-ops\"],
+        \"android\": [\"adb-ops\"],
+        \"waydroid\": [\"adb-ops\"],
+        \"scrcpy\": [\"adb-ops\"],"
+  ALWAYS_LOAD="$ALWAYS_LOAD adb-ops"
+fi
+
+if [ "$HAS_NEOVIM" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD neovim"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"nvim\": [\"neovim\"],
+        \"neovim\": [\"neovim\"],
+        \"vim\": [\"neovim\"],"
+fi
+
+if [ "$HAS_TMUX" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD tmux"
+  CONTENT_TRIGGERS="$CONTENT_TRIGGERS
+        \"tmux\": [\"tmux\"],"
+fi
+
+if [ "$HAS_MEDIA" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD media-tools"
+fi
+
+if [ "$HAS_SECURITY" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD security-audit"
+fi
+
+if [ "$HAS_DATA" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD data-science"
+fi
+
+if [ "$HAS_WEBDEV" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD web-development"
+fi
+
+if [ "$HAS_API" = "yes" ]; then
+  ALWAYS_LOAD="$ALWAYS_LOAD api-design"
+fi
+
+# Build groups
+GROUPS="
+        \"dev-core\": [\"c-project\", \"github-ops\", \"systematic-debugging\", \"verification-before-completion\"],"
+[ "$HAS_PYTHON" = "yes" ] && GROUPS="$GROUPS
+        \"python-dev\": [\"python-style\", \"github-ops\"],"
+[ "$HAS_DOCKER" = "yes" ] && GROUPS="$GROUPS
+        \"devops\": [\"docker\", \"github-ops\"],"
+[ "$HAS_HYPRLAND" = "yes" ] && GROUPS="$GROUPS
+        \"desktop\": [\"hyprland-config\", \"neovim\"],"
+[ "$HAS_ADB" = "yes" ] && GROUPS="$GROUPS
+        \"android\": [\"adb-ops\"]"
+
+# ---- Create directories ----
+mkdir -p "$SKILLS_DIR" "$AGENTS_DIR" "$COMMANDS_DIR" "$THEMES_DIR"
+
+# ---- Write config ----
+echo "[3/6] Writing config..."
+
+cat > "$OPENCODE_DIR/opencode.jsonc" << CONFIGEOF
 {
-  "$schema": "https://opencode.ai/config.json",
+  "\$schema": "https://opencode.ai/config.json",
   "model": "zen/big-pickle",
   "small_model": "zen/big-pickle",
   "plugin": [
     "opencode-skills-collection@latest",
     ["opencode-plugin-preload-skills", {
-      "skills": ["c-project", "github-ops", "stop-slop", "systematic-debugging"],
-      "fileTypeSkills": {
-        ".c": ["c-project"],
-        ".h": ["c-project"],
-        ".py": ["python-style"],
-        ".sh": ["shell-scripting"],
-        ".md": ["stop-slop"]
-      },
-      "pathPatterns": {
-        "~/.config/hypr/**": ["hyprland-config"],
-        "**/Makefile": ["c-project"],
-        "**/*.sh": ["shell-scripting"]
-      },
-      "contentTriggers": {
-        "hyprland": ["hyprland-config"],
-        "keybind": ["hyprland-config"],
-        "monitor": ["hyprland-config"],
-        "wayland": ["hyprland-config"],
-        "adb": ["adb-ops"],
-        "android": ["adb-ops"],
-        "waydroid": ["adb-ops"],
-        "compile": ["c-project"],
-        "gcc": ["c-project"],
-        "valgrind": ["c-project"],
-        "github": ["github-ops"],
-        "pull request": ["github-ops"],
-        "issue": ["github-ops"],
-        "workflow": ["github-ops"],
-        "release": ["github-ops"],
-        "merge": ["github-ops"]
-      },
-      "groups": {
-        "dev-core": ["c-project", "github-ops", "systematic-debugging", "verification-before-completion"],
-        "android": ["adb-ops"],
-        "desktop": ["hyprland-config"]
-      },
+      "skills": [$(echo "$ALWAYS_LOAD" | sed 's/ /", "/g' | sed 's/^/"/' | sed 's/$/"/')],
+      "fileTypeSkills": {$(echo "$FILE_TRIGGERS" | sed '/^$/d')},
+      "pathPatterns": {$(echo "$PATH_TRIGGERS" | sed '/^$/d')},
+      "contentTriggers": {$(echo "$CONTENT_TRIGGERS" | sed '/^$/d')},
+      "groups": {$(echo "$GROUPS" | sed '/^$/d')},
       "maxTokens": 8000,
       "showToasts": true,
       "enableTools": true
@@ -92,40 +279,40 @@ cat > "$OPENCODE_DIR/opencode.jsonc" << 'CONFIGEOF'
 }
 CONFIGEOF
 
-# ---- AGENTS.md ----
+# ---- Write TUI config (theme) ----
+echo "[4/6] Setting theme..."
+
+cat > "$OPENCODE_DIR/tui.json" << 'THEMEEOF'
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "theme": "catppuccin"
+}
+THEMEEOF
+
+# ---- Write AGENTS.md ----
+echo "[5/6] Writing agent instructions..."
+
 cat > "$OPENCODE_DIR/AGENTS.md" << 'AGENTSEOF'
 # Global Agent Instructions
 
 ## User Profile
-- Arch Linux power user on Hyprland (Wayland)
-- Languages: C, Python, Bash
-- Interests: Android modding (ADB, Waydroid), media tools, gaming, CLI utilities
-- Uses: kew, cmus, cava, media-picker, ani-cli, stremio
+Detected from system history. Update this file with your specifics.
 
 ## Core Rules
 
 ### Code Style
-- C: Follow Linux kernel style (tabs=8, K&R braces, snake_case)
-- Python: PEP 8, f-strings, type hints where useful
+- C: Linux kernel style (tabs=8, K&R braces, snake_case)
+- Python: PEP 8, f-strings, type hints
 - Bash: ShellCheck-clean, `set -euo pipefail`, quote variables
+- Rust: rustfmt defaults
+- Go: gofmt defaults
 - Config files: Comment non-obvious changes
 
 ### Workflow
-- Use `systematic-debugging` skill for bugs (reproduce → isolate → diagnose → verify)
+- Use `systematic-debugging` for bugs (reproduce → isolate → diagnose → verify)
 - Use `verification-before-completion` before marking anything done
-- Use `writing-plans` for tasks taking more than 5 minutes
+- Use `writing-plans` for tasks > 5 minutes
 - Ask clarifying questions before ambiguous implementations
-
-### Hyprland / Wayland
-- Config lives at `~/.config/hypr/hyprland.conf`
-- Test binds with `hyprctl dispatch` before committing
-- Use `hyprctl reload` after config changes
-- Monitor input switching: `ddcutil setvcp 60 <value>`
-
-### ADB / Android
-- Always check `adb devices` before operations
-- Use `adb push`/`adb pull` for file transfers
-- Waydroid sessions: start/stop with `waydroid session start/stop`
 
 ### Safety
 - Never commit API keys, tokens, or secrets
@@ -134,25 +321,18 @@ cat > "$OPENCODE_DIR/AGENTS.md" << 'AGENTSEOF'
 - Use `sudo` sparingly; explain when required
 
 ### Communication
-- Be concise. No preamble ("Here is...", "I will now...")
+- Be concise. No preamble.
 - Reference code with `file:line` format
 - One-word answers when possible
 - No emojis unless requested
 
 ## Skill Usage
 - Invoke relevant skills proactively when the task matches
-- Use `ask-questions-if-underspecified` before vague requirements
 - Use `caveman` output mode when token efficiency matters
 - Use `stop-slop` on any prose or documentation output
-
-## Project Context
-- `~/projects/captive-chat` - Python captive portal chat system
-- `~/projects/stremiop` - Stremio-related project
-- `~/projects/dtn-mesh` - Delay-tolerant networking mesh
-- C files in `~/projects/` for quick experiments
 AGENTSEOF
 
-# ---- Custom Skills ----
+# ---- Write Custom Skills ----
 
 # hyprland-config
 mkdir -p "$SKILLS_DIR/hyprland-config"
@@ -162,40 +342,23 @@ name: hyprland-config
 description: Use when editing Hyprland config, adding keybinds, monitoring setup, or debugging Wayland issues. Trigger keywords: hyprland, keybind, monitor, wayland, hyprctl, ddcutil.
 ---
 
-# Hyprland Configuration Skill
+# Hyprland Configuration
 
-## Config Location
-- Main config: `~/.config/hypr/hyprland.conf`
-- Backups: `~/.backup_hyprconf-charan/`
-
-## Key Commands
-- Reload config: `hyprctl reload`
+## Commands
+- Reload: `hyprctl reload`
 - Test bind: `hyprctl dispatch <dispatcher>`
-- Monitor input switch: `ddcutil setvcp 60 <value>`
-  - `0x0F` = DisplayPort
-  - `0x11` = HDMI 1
+- Monitor input: `ddcutil setvcp 60 <value>` (0x0F=DP, 0x11=HDMI1)
 
-## Config Patterns
-```bash
-# Keybind format
+## Config Pattern
+```
 bind = $mainMod, KEY, exec, COMMAND
-
-# Monitor config
 monitor = NAME, RESOLUTION@RATE, POSITION, SCALE
-
-# Window rules
 windowrulev2 = float, class:^(NAME)$
 ```
 
-## Common Tasks
-1. Adding a keybind: Append to `~/.config/hypr/hyprland.conf`
-2. After editing: Run `hyprctl reload`
-3. Testing: Use `hyprctl dispatch` to verify dispatcher works
-
 ## Safety
-- Always backup before major changes
+- Backup before changes
 - Test one change at a time
-- Keep a working fallback config
 SKILLEOF
 
 # adb-ops
@@ -208,46 +371,23 @@ description: Use when working with Android devices via ADB, Waydroid, file trans
 
 # ADB / Android Operations
 
-## Prerequisites
-- Always run `adb devices` first to verify connection
-- Ensure device is in correct mode (USB debugging enabled)
-
-## Core Commands
+## Core
 ```bash
-# Device management
-adb devices                    # List connected devices
-adb -s <serial> shell          # Shell into specific device
-
-# File transfer
-adb push <local> <remote>      # Push file to device
-adb pull <remote> <local>      # Pull file from device
-
-# App management
+adb devices                    # List devices
+adb push <local> <remote>      # Push file
+adb pull <remote> <local>      # Pull file
 adb install <apk>              # Install APK
-adb uninstall <package>        # Uninstall app
-adb shell pm list packages     # List installed packages
-
-# Session management
-adb forward tcp:<local> tcp:<remote>  # Port forwarding
-adb reverse tcp:<local> tcp:<remote>  # Reverse forwarding
 ```
 
 ## Waydroid
 ```bash
-# Session management
-waydroid session start
-waydroid session stop
-waydroid show-full-ui
-
-# App management
+waydroid session start/stop
 waydroid app install <apk>
-waydroid app list
 ```
 
 ## Safety
-- Verify device connection before operations
-- Use `adb pull` to backup before destructive changes
-- Check `adb devices` after each major operation
+- Verify connection first
+- Backup before destructive changes
 SKILLEOF
 
 # c-project
@@ -260,55 +400,20 @@ description: Use when working with C code, compiling, debugging, or setting up C
 
 # C Project Management
 
-## Code Style (Linux Kernel)
-- Tabs = 8 spaces
-- K&R brace style
-- snake_case for functions/variables
-- UPPER_CASE for macros/constants
-- Functions limited to one screen
+## Style
+- Tabs=8, K&R braces, snake_case, UPPER_CASE macros
 
-## Compile & Run
+## Compile
 ```bash
-# Simple compile
-gcc -Wall -Wextra -o <output> <source.c>
-
-# With debug symbols
-gcc -g -Wall -Wextra -o <output> <source.c>
-
-# Optimization levels
-gcc -O2 -o <output> <source.c>
-
-# Run
-./<output>
+gcc -Wall -Wextra -g -o out src.c
+valgrind --leak-check=full ./out
+gcc -fsanitize=address -g -o out src.c
 ```
 
-## Debugging
-```bash
-# GDB
-gcc -g -o <output> <source.c>
-gdb ./<output>
-
-# Valgrind (memory checking)
-valgrind --leak-check=full ./<output>
-
-# AddressSanitizer
-gcc -fsanitize=address -g -o <output> <source.c>
-```
-
-## Project Structure
-```
-project/
-├── src/           # Source files
-├── include/       # Headers
-├── Makefile       # Build system
-└── README.md      # Documentation
-```
-
-## Common Patterns
-- Always check return values
+## Safety
+- Check return values
 - Free allocated memory
-- Use `const` where possible
-- Include header guards
+- Use const where possible
 SKILLEOF
 
 # github-ops
@@ -319,84 +424,30 @@ name: github-ops
 description: Use when working with GitHub repos, PRs, issues, releases, or Actions. Trigger keywords: gh, github, pr, issue, release, workflow, actions, fork, clone.
 ---
 
-# GitHub Operations (gh CLI)
+# GitHub CLI (gh)
 
-## Setup
+## PRs
 ```bash
-gh auth login                    # Interactive auth
-gh auth status                   # Check who you're logged in as
-gh config set editor vim         # Set default editor
-gh config set git_protocol ssh   # Use SSH for git ops
-```
-
-## Repos
-```bash
-gh repo clone owner/repo         # Clone
-gh repo create NAME --public --source=. --push  # Create from current dir
-gh repo fork owner/repo --clone  # Fork + clone
-gh repo view                     # View in terminal
-gh repo view --web               # Open in browser
-gh repo sync                     # Sync fork with upstream
-gh repo list --limit 20          # List repos
-```
-
-## Pull Requests
-```bash
-gh pr create --fill              # Create from commits
-gh pr create --draft             # Draft PR
-gh pr list                       # List open PRs
-gh pr list --author @me          # My PRs
-gh pr list --reviewer @me        # PRs needing my review
-gh pr checkout 42                # Checkout PR branch locally
-gh pr diff 42                    # See changes
-gh pr checks 42 --watch          # Watch CI live
-gh pr review 42 --approve        # Approve
-gh pr review 42 --request-changes --body "Needs X"
-gh pr merge 42 --squash --delete-branch  # Merge + cleanup
-gh pr merge 42 --auto --squash   # Auto-merge when checks pass
+gh pr create --fill
+gh pr checkout 42
+gh pr checks 42 --watch
+gh pr merge 42 --squash --delete-branch
 ```
 
 ## Issues
 ```bash
-gh issue create --title "Bug: X" --body "Description" --label bug
-gh issue list                    # List issues
-gh issue list --assignee @me     # My issues
-gh issue list --label bug        # Filter by label
-gh issue view 17                 # View issue
-gh issue close 17 --comment "Fixed in #42"
-```
-
-## Actions / CI
-```bash
-gh workflow list                 # List workflows
-gh workflow run deploy.yml       # Trigger manually
-gh run list --workflow ci.yml --limit 5
-gh run watch RUN_ID              # Stream logs live
-gh run rerun RUN_ID --failed     # Retry failed only
-```
-
-## Releases
-```bash
-gh release create v1.0.0 --generate-notes dist/*.tar.gz
-gh release list
+gh issue create --title "X" --body "Y" --label bug
+gh issue list --assignee @me
 ```
 
 ## Aliases
 ```bash
 gh alias set prs 'pr list --author @me'
-gh alias set mybugs 'issue list --label bug --assignee @me'
 gh alias set ship '!gh pr review $1 --approve && gh pr merge $1 --squash --delete-branch' -s
 ```
-
-## Gotchas
-- `gh` uses `GH_TOKEN` first, falls back to `GITHUB_TOKEN`
-- SSO orgs need separate token auth: `gh auth refresh -s read:org`
-- Don't use `apt install gh` on Debian - wrong package
 SKILLEOF
 
-# ---- Agents ----
-
-# review agent
+# ---- Write Agents ----
 cat > "$AGENTS_DIR/review.md" << 'AGENTEOF'
 ---
 description: Reviews code for bugs, style issues, and potential improvements
@@ -406,17 +457,9 @@ permission:
   bash: deny
 ---
 
-You are a code reviewer. Analyze the code for:
-1. Bugs and logic errors
-2. Style violations (Linux kernel style for C, PEP 8 for Python)
-3. Security issues
-4. Performance problems
-5. Missing error handling
-
-Report findings concisely with file:line references. Do not make changes.
+Code reviewer. Check for: bugs, style violations, security issues, performance problems, missing error handling. Report with file:line references. Do not make changes.
 AGENTEOF
 
-# debug agent
 cat > "$AGENTS_DIR/debug.md" << 'AGENTEOF'
 ---
 description: Helps debug issues systematically
@@ -426,103 +469,39 @@ permission:
   bash: ask
 ---
 
-You are a debugger. Follow this process:
-1. Understand the expected vs actual behavior
-2. Identify minimal reproduction steps
-3. Isolate the problem to specific code
-4. Propose a fix with verification steps
-
-Never guess. Ask for more info if unclear. Reference file:line for all findings.
+Debugger. Process: understand expected vs actual → minimal reproduction → isolate problem → propose fix with verification. Never guess. Reference file:line.
 AGENTEOF
 
-# ---- Commands ----
-
-# /learn
+# ---- Write Commands ----
 cat > "$COMMANDS_DIR/learn.md" << 'CMDEOF'
 ---
 description: Save a lesson learned to AGENTS.md
 ---
-
-The user wants to save a lesson learned. Take what they said and write it as a concise, actionable instruction to the appropriate AGENTS.md file (project-level if in a project, global otherwise).
-
-Format: short rule, not a story. Example: "Use `set -euo pipefail` in all bash scripts."
+Take what the user said and write it as a concise, actionable instruction to AGENTS.md. Short rule, not a story.
 CMDEOF
 
-# /finish-work
 cat > "$COMMANDS_DIR/finish-work.md" << 'CMDEOF'
 ---
 description: Final pre-commit quality gate
 ---
-
-Run these checks before committing:
-1. Code compiles/runs without errors
-2. No debug prints or TODOs left behind
-3. Error handling is present
-4. No secrets or keys in code
-5. If C: no memory leaks (valgrind if applicable)
-6. If Python: no unused imports
-7. Run any existing linter/formatter
-
-Report pass/fail for each item. Do not commit automatically.
+Check: compiles, no debug prints, error handling present, no secrets, no unused imports, linter passes. Report pass/fail per item.
 CMDEOF
 
-# /session-summary
 cat > "$COMMANDS_DIR/session-summary.md" << 'CMDEOF'
 ---
 description: Summarize current session for handoff
 ---
-
-Create a brief session summary:
-1. What was accomplished
-2. What's in progress (if anything)
-3. Key decisions made
-4. Next steps
-5. Any blockers or issues
-
-Keep it short and actionable. Format as markdown.
+Brief summary: what got done, what's in progress, key decisions, next steps, blockers. Short and actionable.
 CMDEOF
 
-# /custom-skill
 cat > "$COMMANDS_DIR/custom-skill.md" << 'CMDEOF'
 ---
 description: Auto-generate a skill by researching the current task online
 ---
-
-The user wants to create a custom skill based on what they're currently working on. Take their input ($ARGUMENTS) or infer from the current task context.
-
-Steps:
-1. Search the web for best practices, common commands, gotchas, and workflows related to the topic
-2. Synthesize findings into a SKILL.md file
-3. Write it to `~/.config/opencode/skills/<skill-name>/SKILL.md`
-4. Use this structure:
-
-```
----
-name: <kebab-case-name>
-description: Use when [trigger condition]. Trigger keywords: [comma-separated keywords].
----
-
-# <Skill Title>
-
-## <Section>
-(content)
-
-## Common Commands
-(code blocks with commands)
-
-## Safety
-(warnings and best practices)
-```
-
-Rules:
-- Keep it concise. Max 150 lines.
-- Focus on commands, patterns, and gotchas - not theory
-- Include real examples from web research
-- Always add a Safety section
-- Confirm to user: "Created skill `<name>` at `~/.config/opencode/skills/<name>/SKILL.md` - restart opencode to load it"
+Research the topic online, synthesize into a SKILL.md at ~/.config/opencode/skills/<name>/SKILL.md. Structure: name, description with trigger keywords, sections for commands/patterns/gotchas, safety section. Max 150 lines. Confirm creation to user.
 CMDEOF
 
-# ---- Package.json ----
+# ---- Write package.json ----
 cat > "$OPENCODE_DIR/package.json" << 'PKGEOF'
 {
   "dependencies": {
@@ -533,20 +512,18 @@ cat > "$OPENCODE_DIR/package.json" << 'PKGEOF'
 }
 PKGEOF
 
-# Install plugin dependencies
-echo "Installing plugin dependencies..."
+# ---- Install dependencies ----
+echo "[6/6] Installing plugin dependencies..."
 (cd "$OPENCODE_DIR" && npm install 2>/dev/null) || true
 
+# ---- Summary ----
 echo ""
 echo "=== Setup Complete ==="
+echo ""
+echo "Skills auto-loaded at start: $(echo $ALWAYS_LOAD | wc -w) skills"
+echo "  $ALWAYS_LOAD"
+echo ""
+echo "Theme: catppuccin"
+echo "Model: zen/big-pickle (free)"
+echo ""
 echo "Restart opencode to load changes."
-echo ""
-echo "Installed:"
-echo "  Config:   ~/.config/opencode/opencode.jsonc"
-echo "  Skills:   ~/.config/opencode/skills/ (4 custom + 1595 from collection)"
-echo "  Agents:   ~/.config/opencode/agents/ (review, debug)"
-echo "  Commands: ~/.config/opencode/commands/ (/learn, /finish-work, /session-summary, /custom-skill)"
-echo "  Model:    zen/big-pickle (free)"
-echo ""
-echo "Auto-loaded skills at start: c-project, github-ops, stop-slop, systematic-debugging"
-echo "On-demand: hyprland-config, adb-ops (by keyword triggers)"
